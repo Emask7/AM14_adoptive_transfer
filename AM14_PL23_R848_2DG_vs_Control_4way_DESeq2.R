@@ -15,11 +15,9 @@
   head(cts)
 
   coldata <- read.csv("sample_info.csv")
-  coldata <- coldata[1:20 , c(1:3, 5:8)]
+  coldata <- coldata[1:20 , c(1:3, 5:6)]
   coldata$Cohort <- factor(coldata$Cohort)
   coldata$Treatment <- factor(coldata$Treatment)
-  coldata$Stim <- factor(coldata$Stim)
-  coldata$Drug <- factor(coldata$Drug)
   coldata
   
 # Make sure the columns of cts and rows of coldata are in the same order -------
@@ -30,7 +28,7 @@
 
 # Set up DESeq Data Set --------------------------------------------------------
   dds <- DESeqDataSetFromMatrix(countData = cts, colData = coldata,
-                                design = ~Treatment + Cohort)
+                                design = ~Cohort + Treatment)
   dds
   keep <- rowSums(counts(dds) >= 10) >= 5
   dds <- dds[keep,]
@@ -108,7 +106,7 @@
     
   # PCA plot removing batch effects --------------------------------------------
     mat <- assay(vsd)
-    mm <- model.matrix(~ ~Stim + Drug + Stim:Drug, colData(vsd))
+    mm <- model.matrix(~Treatment, colData(vsd))
     mat <- removeBatchEffect(mat, batch=vsd$Cohort, design=mm)
     assay(vsd) <- mat
     pcaData <- plotPCA(vsd, intgroup=c("Treatment", "Cohort"), returnData=TRUE)
@@ -129,28 +127,46 @@
   resultsNames(dds)
     
   res_PL23 <- results(dds, contrast = c("Treatment", "PL2-3+2DG", "PL2-3"))
+  res_PL23 <- results(dds, contrast = c("Treatment", "PL2-3+2DG", "PL2-3"), 
+                      lfcThreshold = 0.6, alpha = 0.05)
   res_PL23
-  summary(res_PL23, alpha = 0.05)
+  summary(res_PL23)
   nrow(subset(res_PL23, 
               res_PL23$padj <= 0.05 & res_PL23$log2FoldChange >= 1))
   nrow(subset(res_PL23, 
               res_PL23$padj <= 0.05 & res_PL23$log2FoldChange <= -1))
   
   res_R848 <- results(dds, contrast = c("Treatment", "R848+2DG", "R848"))
+  res_R848 <- results(dds, contrast = c("Treatment", "R848+2DG", "R848"), 
+                      lfcThreshold = 0.6, alpha = 0.05)
   res_R848
-  summary(res_R848, alpha = 0.05)
+  summary(res_R848)
   nrow(subset(res_R848, 
               res_R848$padj <= 0.05 & res_R848$log2FoldChange >= 1))
   nrow(subset(res_R848, 
               res_R848$padj <= 0.05 & res_R848$log2FoldChange <= -1))
   
   res_PL23vR848 <- results(dds, contrast = c("Treatment", "PL2-3", "R848"))
+  res_PL23vR848 <- results(dds, contrast = c("Treatment", "PL2-3", "R848"), 
+                           lfcThreshold = 0.6, alpha = 0.05)
   res_PL23vR848
-  summary(res_PL23vR848, alpha = 0.05)
+  summary(res_PL23vR848)
   nrow(subset(res_PL23vR848, 
               res_PL23vR848$padj <= 0.05 & res_PL23vR848$log2FoldChange >= 1))
   nrow(subset(res_PL23vR848, 
               res_PL23vR848$padj <= 0.05 & res_PL23vR848$log2FoldChange <= -1))
+  
+  res_2DG_PL23vR848 <- results(dds, contrast = c("Treatment", "PL2-3+2DG", "R848+2DG"))
+  res_2DG_PL23vR848 <- results(dds, contrast = c("Treatment", "PL2-3+2DG", "R848+2DG"), 
+                               lfcThreshold = 1, alpha = 0.05)
+  res_2DG_PL23vR848
+  summary(res_2DG_PL23vR848)
+  nrow(subset(res_2DG_PL23vR848, 
+              res_2DG_PL23vR848$padj <= 0.05 & res_2DG_PL23vR848$log2FoldChange >= 1))
+  nrow(subset(res_2DG_PL23vR848, 
+              res_2DG_PL23vR848$padj <= 0.05 & res_2DG_PL23vR848$log2FoldChange <= -1))
+  
+  
   
   # Filter out rows with a padj value of NA ------------------------------------
     # Note: There are a few reasons why a p value or padj value would be NA
