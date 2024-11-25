@@ -194,4 +194,3 @@
   writeData(wb, "PL23_Ctrl_vs_R848_Ctrl", PL23vR848_filt_res, rowNames = TRUE)
   
   saveWorkbook(wb, "Output/DESeq2_counts.xlsx", overwrite = TRUE)
-  
