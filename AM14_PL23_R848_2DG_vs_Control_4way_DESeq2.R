@@ -123,88 +123,96 @@
       labs(title = "After correcting for batch effects")
     dev.off()
   
-# Differential Expression Analysis -------------------------------------------
+# Differential Expression Analysis ---------------------------------------------
   resultsNames(dds)
     
+# Get results (default methods) ------------------------------------------------
+  summary_v2 <- function(res){
+    up <- nrow(subset(res, res$padj <= 0.05 & res$log2FoldChange >= 0.6))
+    down <- nrow(subset(res, res$padj <= 0.05 & res$log2FoldChange <= -0.6))
+    print(c("Up: ", up), quote = FALSE)
+    print(c("Down: ", down), quote = FALSE)
+  }
+  
   res_PL23 <- results(dds, contrast = c("Treatment", "PL2-3+2DG", "PL2-3"))
-  res_PL23 <- results(dds, contrast = c("Treatment", "PL2-3+2DG", "PL2-3"), 
-                      lfcThreshold = 0.6, alpha = 0.05)
-  res_PL23
-  summary(res_PL23)
-  nrow(subset(res_PL23, 
-              res_PL23$padj <= 0.05 & res_PL23$log2FoldChange >= 0.6))
-  nrow(subset(res_PL23, 
-              res_PL23$padj <= 0.05 & res_PL23$log2FoldChange <= -0.6))
-  
-  rownames(subset(res_PL23, res_PL23$padj <= 0.05 & res_PL23$log2FoldChange <= -0.6))
-  
   res_R848 <- results(dds, contrast = c("Treatment", "R848+2DG", "R848"))
-  res_R848 <- results(dds, contrast = c("Treatment", "R848+2DG", "R848"), 
-                      lfcThreshold = 0.6, alpha = 0.05)
-  res_R848
-  summary(res_R848)
-  nrow(subset(res_R848, 
-              res_R848$padj <= 0.05 & res_R848$log2FoldChange >= 1))
-  nrow(subset(res_R848, 
-              res_R848$padj <= 0.05 & res_R848$log2FoldChange <= -1))
-  
   res_PL23vR848 <- results(dds, contrast = c("Treatment", "PL2-3", "R848"))
-  res_PL23vR848 <- results(dds, contrast = c("Treatment", "PL2-3", "R848"), 
-                           lfcThreshold = 0.6, alpha = 0.05)
-  res_PL23vR848
-  summary(res_PL23vR848)
-  nrow(subset(res_PL23vR848, 
-              res_PL23vR848$padj <= 0.05 & res_PL23vR848$log2FoldChange >= 1))
-  nrow(subset(res_PL23vR848, 
-              res_PL23vR848$padj <= 0.05 & res_PL23vR848$log2FoldChange <= -1))
-  
   res_2DG_PL23vR848 <- results(dds, contrast = c("Treatment", "PL2-3+2DG", "R848+2DG"))
-  res_2DG_PL23vR848 <- results(dds, contrast = c("Treatment", "PL2-3+2DG", "R848+2DG"), 
-                               lfcThreshold = 1, alpha = 0.05)
-  res_2DG_PL23vR848
-  summary(res_2DG_PL23vR848)
-  nrow(subset(res_2DG_PL23vR848, 
-              res_2DG_PL23vR848$padj <= 0.05 & res_2DG_PL23vR848$log2FoldChange >= 1))
-  nrow(subset(res_2DG_PL23vR848, 
-              res_2DG_PL23vR848$padj <= 0.05 & res_2DG_PL23vR848$log2FoldChange <= -1))
-  
-  pl23_down <- rownames(data.frame(subset(res_PL23, 
-                       res_PL23$padj <= 0.05 & res_PL23$log2FoldChange <= -1)))
-  pl23_down <- data.frame(pl23_down, pl23_down)
-  colnames(pl23_down) <- c("gene", "pl23_2dg_ctrl")
-  
-  pl23_r848_down <- rownames(data.frame(subset(res_PL23vR848, 
-                           res_PL23vR848$padj <= 0.05 & res_PL23vR848$log2FoldChange <= -1)))
-  pl23_r848_down <- data.frame(pl23_r848_down, pl23_r848_down)
-  colnames(pl23_r848_down) <- c("gene", "pl23_r848")
-  
-  temp_join <- inner_join(pl23_down, pl23_r848_down, by = "gene")
-  head(temp_join)
-  nrow(temp_join)
+
+  summary_v2(res_PL23)
+  summary_v2(res_R848)
+  summary_v2(res_PL23vR848)
+  summary_v2(res_2DG_PL23vR848)
   
   # Filter out rows with a padj value of NA ------------------------------------
     # Note: There are a few reasons why a p value or padj value would be NA
     # According to the DESeq2 manual, these are the reasons:
-      # If within a row, all samples have zero counts, the baseMean column will
-        # be zero, and the LFC estimates, p value and padj will all be NA.
-      # If a row contains a sample with an extreme count outlier then the 
-        # p value and padj will be set to NA.
-      # If a row is filtered by automatic independent filtering, for having a 
-        # low mean normalized count, then only padj will be set to NA.
-  
-    PL23_filt_res <- data.frame(subset(res_PL23, !is.na(padj)))
-    R848_filt_res <- data.frame(subset(res_R848, !is.na(padj)))
-    PL23vR848_filt_res <- data.frame(subset(res_PL23vR848, !is.na(padj)))
+    # If within a row, all samples have zero counts, the baseMean column will
+    # be zero, and the LFC estimates, p value and padj will all be NA.
+    # If a row contains a sample with an extreme count outlier then the 
+    # p value and padj will be set to NA.
+    # If a row is filtered by automatic independent filtering, for having a 
+    # low mean normalized count, then only padj will be set to NA.
+    
+    res_PL23 <- data.frame(subset(res_PL23, !is.na(padj)))
+    res_R848 <- data.frame(subset(res_R848, !is.na(padj)))
+    res_PL23vR848 <- data.frame(subset(res_PL23vR848, !is.na(padj)))
+    res_2DG_PL23vR848 <- data.frame(subset(res_2DG_PL23vR848, !is.na(padj)))
+    
+  # Make DEG lists and export to CSV files -------------------------------------
+    write_DEG_CSV <- function(res, file_start){
+      up <- subset(res, res$padj <= 0.05 & res$log2FoldChange >= 0.6)
+      down <- subset(res, res$padj <= 0.05 & res$log2FoldChange <= -0.6)
+      all <- subset(res, res$padj <= 0.05 & abs(res$log2FoldChange) >= 0.6)
+      
+      write.table(rownames(up), 
+                  file = stri_join(c(file_start, "_Up.txt"), collapse = ""),
+                  quote = FALSE, row.names = FALSE, col.names = FALSE)
+      write.table(rownames(down), 
+                  file = stri_join(c(file_start, "_Down.txt"), collapse = ""),
+                  quote = FALSE, row.names = FALSE, col.names = FALSE)
+      write.table(rownames(all),
+                  file = stri_join(c(file_start, "_All.txt"), collapse = ""),
+                  quote = FALSE, row.names = FALSE, col.names = FALSE)
+    }
+
+    write_DEG_CSV(res_PL23, "PL2-3_2DG_vs_Control")
+    write_DEG_CSV(res_R848, "R848_2DG_vs_Control")
+    write_DEG_CSV(res_PL23vR848, "PL2-3_Ctrl_vs_R848_Ctrl")
+    write_DEG_CSV(res_2DG_PL23vR848, "PL2-3_2DG_vs_R848_2DG")
+
+# # Get results (Threshold-Based Wald tests) ----------------------------------- 
+#   res_PL23_lfc <- results(dds, contrast = c("Treatment", "PL2-3+2DG", "PL2-3"),
+#                           lfcThreshold = 0.6, altHypothesis = "greaterAbs", alpha = 0.05)
+#   res_R848_lfc <- results(dds, contrast = c("Treatment", "R848+2DG", "R848"), 
+#                           lfcThreshold = 0.6, altHypothesis = "greaterAbs", alpha = 0.05)
+#   res_PL23vR848_lfc <- results(dds, contrast = c("Treatment", "PL2-3", "R848"),
+#                                lfcThreshold = 0.6, altHypothesis = "greaterAbs", alpha = 0.05)
+#   res_2DG_PL23vR848_lfc <- results(dds, contrast = c("Treatment", "PL2-3+2DG", "R848+2DG"), 
+#                                    lfcThreshold = 1, altHypothesis = "greaterAbs", alpha = 0.05)
+#   
+#   summary(res_PL23_lfc)
+#   summary(res_R848_lfc)
+#   summary(res_PL23vR848_lfc)
+#   summary(res_2DG_PL23vR848_lfc)
 
 # Save count data to Excel file ------------------------------------------------
-  wb <- createWorkbook("Output/DESeq2_counts.xlsx")
+  wb <- createWorkbook("Output/DESeq2_results.xlsx")
 
   addWorksheet(wb, "PL23_2DG_vs_Ctrl")
   addWorksheet(wb, "R848_2DG_vs_Ctrl")
   addWorksheet(wb, "PL23_Ctrl_vs_R848_Ctrl")
-
-  writeData(wb, "PL23_2DG_vs_Ctrl", PL23_filt_res, rowNames = TRUE)
-  writeData(wb, "R848_2DG_vs_Ctrl", R848_filt_res, rowNames = TRUE)
-  writeData(wb, "PL23_Ctrl_vs_R848_Ctrl", PL23vR848_filt_res, rowNames = TRUE)
+  addWorksheet(wb, "PL23_2DG_vs_R848_2DG")
+  addWorksheet(wb, "Raw_Gene_Counts")
+  addWorksheet(wb, "Normalized_Gene_Counts")
   
-  saveWorkbook(wb, "Output/DESeq2_counts.xlsx", overwrite = TRUE)
+  writeData(wb, "PL23_2DG_vs_Ctrl", res_PL23, rowNames = TRUE)
+  writeData(wb, "R848_2DG_vs_Ctrl", res_R848, rowNames = TRUE)
+  writeData(wb, "PL23_Ctrl_vs_R848_Ctrl", res_PL23vR848, rowNames = TRUE)
+  writeData(wb, "PL23_2DG_vs_R848_2DG", res_2DG_PL23vR848, rowNames = TRUE)
+  writeData(wb, "Raw_Gene_Counts", 
+            counts(dds, normalized = FALSE), rowNames = TRUE)
+  writeData(wb, "Normalized_Gene_Counts", 
+            counts(dds, normalized = TRUE), rowNames = TRUE)
+  
+  saveWorkbook(wb, "Output/DESeq2_results.xlsx", overwrite = TRUE)
