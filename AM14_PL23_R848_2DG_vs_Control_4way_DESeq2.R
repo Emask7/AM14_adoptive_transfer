@@ -132,9 +132,11 @@
   res_PL23
   summary(res_PL23)
   nrow(subset(res_PL23, 
-              res_PL23$padj <= 0.05 & res_PL23$log2FoldChange >= 1))
+              res_PL23$padj <= 0.05 & res_PL23$log2FoldChange >= 0.6))
   nrow(subset(res_PL23, 
-              res_PL23$padj <= 0.05 & res_PL23$log2FoldChange <= -1))
+              res_PL23$padj <= 0.05 & res_PL23$log2FoldChange <= -0.6))
+  
+  rownames(subset(res_PL23, res_PL23$padj <= 0.05 & res_PL23$log2FoldChange <= -0.6))
   
   res_R848 <- results(dds, contrast = c("Treatment", "R848+2DG", "R848"))
   res_R848 <- results(dds, contrast = c("Treatment", "R848+2DG", "R848"), 
@@ -166,7 +168,19 @@
   nrow(subset(res_2DG_PL23vR848, 
               res_2DG_PL23vR848$padj <= 0.05 & res_2DG_PL23vR848$log2FoldChange <= -1))
   
+  pl23_down <- rownames(data.frame(subset(res_PL23, 
+                       res_PL23$padj <= 0.05 & res_PL23$log2FoldChange <= -1)))
+  pl23_down <- data.frame(pl23_down, pl23_down)
+  colnames(pl23_down) <- c("gene", "pl23_2dg_ctrl")
   
+  pl23_r848_down <- rownames(data.frame(subset(res_PL23vR848, 
+                           res_PL23vR848$padj <= 0.05 & res_PL23vR848$log2FoldChange <= -1)))
+  pl23_r848_down <- data.frame(pl23_r848_down, pl23_r848_down)
+  colnames(pl23_r848_down) <- c("gene", "pl23_r848")
+  
+  temp_join <- inner_join(pl23_down, pl23_r848_down, by = "gene")
+  head(temp_join)
+  nrow(temp_join)
   
   # Filter out rows with a padj value of NA ------------------------------------
     # Note: There are a few reasons why a p value or padj value would be NA
