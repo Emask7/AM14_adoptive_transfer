@@ -1,6 +1,6 @@
-install.packages(c("RColorBrewer","openxlsx","ggplot2","readr","dplyr","stringi","grid","gridBase","gridExtra","ggrepel", "BiocManager", "igraph"))
-library(BiocManager)
-BiocManager::install(c("DESeq2","apeglm","vsn","EnhancedVolcano","pheatmap","pheatmap","limma","forcats", "clusterProfiler", "pathview", "enrichplot", "org.Mm.eg.db"))
+# install.packages(c("RColorBrewer","openxlsx","ggplot2","readr","dplyr","stringi","grid","gridBase","gridExtra","ggrepel", "BiocManager", "igraph"))
+# library(BiocManager)
+# BiocManager::install(c("DESeq2","apeglm","vsn","EnhancedVolcano","pheatmap","pheatmap","limma","forcats", "clusterProfiler", "pathview", "enrichplot", "org.Mm.eg.db"))
 
 library(BiocManager)
 library(DESeq2)

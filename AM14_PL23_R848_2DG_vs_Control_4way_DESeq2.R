@@ -4,13 +4,28 @@
   cts <- cts[, c(2, 5:24)]
   head(cts)
   nrow(cts)
-  cts <- cts[!duplicated(cts$external_gene_name), ]
-  nrow(cts)
-  rownames(cts) <- cts$external_gene_name
   cts <- subset(cts, external_gene_name != "7SK" & 
                   external_gene_name != "5_8S_rRNA" & 
                   external_gene_name != "5S_rRNA")
-  nrow(cts)
+  
+  # For gene symbols as row names ----------------------------------------------
+    cts <- cts[!duplicated(cts$external_gene_name), ]
+    nrow(cts)
+    rownames(cts) <- cts$external_gene_name
+    nrow(cts)
+    
+  # For Ensembl IDs as row names -----------------------------------------------
+    cts <- cts[!duplicated(cts$ensembl_gene_id), ]
+    nrow(cts)
+    rownames(cts) <- cts$ensembl_gene_id
+    nrow(cts)
+    
+  # For Entrez IDs as row names ------------------------------------------------
+    cts <- cts[!duplicated(cts$entrezgene), ]
+    nrow(cts)
+    rownames(cts) <- cts$ensembl_gene_id
+    nrow(cts)
+
   cts <- as.matrix(cts[, 2:21])
   head(cts)
 
