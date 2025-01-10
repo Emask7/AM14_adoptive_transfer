@@ -1,15 +1,17 @@
 # Import count data and sample info --------------------------------------------
   cts <- read.delim("raw_data/AM14_rawCounts_No_Ighv_or_Igkv_genes.txt")
   colnames(cts)
-  cts <- cts[, c(2, 5:24)]
-  head(cts)
   nrow(cts)
-  cts <- cts[!duplicated(cts$external_gene_name), ]
-  nrow(cts)
-  rownames(cts) <- cts$external_gene_name
   cts <- subset(cts, external_gene_name != "7SK" & 
                   external_gene_name != "5_8S_rRNA" & 
                   external_gene_name != "5S_rRNA")
+  nrow(cts)
+  cts <- cts[, c(1, 5:24)]
+  head(cts)
+  nrow(cts)
+  cts <- cts[!duplicated(cts$ensembl_gene_id), ]
+  nrow(cts)
+  rownames(cts) <- cts$ensembl_gene_id
   nrow(cts)
   cts <- as.matrix(cts[, 2:21])
   head(cts)
