@@ -1,45 +1,52 @@
 # Import count data and sample info --------------------------------------------
   cts <- read.delim("raw_data/AM14_rawCounts_No_Ighv_or_Igkv_genes.txt")
   colnames(cts)
-  cts <- cts[, c(2, 5:24)]
-  head(cts)
   nrow(cts)
   cts <- subset(cts, external_gene_name != "7SK" & 
                   external_gene_name != "5_8S_rRNA" & 
                   external_gene_name != "5S_rRNA")
+  nrow(cts)
   
-  # For gene symbols as row names ----------------------------------------------
-    cts <- cts[!duplicated(cts$external_gene_name), ]
-    nrow(cts)
-    rownames(cts) <- cts$external_gene_name
-    nrow(cts)
-    
-  # For Ensembl IDs as row names -----------------------------------------------
-    cts <- cts[!duplicated(cts$ensembl_gene_id), ]
-    nrow(cts)
-    rownames(cts) <- cts$ensembl_gene_id
-    nrow(cts)
-    
+  # # For gene symbols as row names ----------------------------------------------
+  #   cts <- cts[!duplicated(cts$external_gene_name), ]
+  #   nrow(cts)
+  #   cts <- cts[!is.na(cts$external_gene_name), ]
+  #   nrow(cts)
+  #   rownames(cts) <- cts$external_gene_name
+  #   nrow(cts)
+  # 
+  # # For Ensembl IDs as row names -----------------------------------------------
+  #   cts <- cts[!duplicated(cts$ensembl_gene_id), ]
+  #   nrow(cts)
+  #   cts <- cts[!is.na(cts$ensembl_gene_id), ]
+  #   nrow(cts)
+  #   rownames(cts) <- cts$ensembl_gene_id
+  #   nrow(cts)
+  #   
   # For Entrez IDs as row names ------------------------------------------------
     cts <- cts[!duplicated(cts$entrezgene), ]
     nrow(cts)
-    rownames(cts) <- cts$ensembl_gene_id
+    cts <- cts[!is.na(cts$entrezgene), ]
+    nrow(cts)
+    rownames(cts) <- cts$entrezgene
     nrow(cts)
 
-  cts <- as.matrix(cts[, 2:21])
-  head(cts)
-
-  coldata <- read.csv("sample_info.csv")
-  coldata <- coldata[1:20 , c(1:3, 5:6)]
-  coldata$Cohort <- factor(coldata$Cohort)
-  coldata$Treatment <- factor(coldata$Treatment)
-  coldata
+  # Remove unneeded columns and set up experimental factors --------------------
+    cts <- as.matrix(cts[, 5:24])
+    head(cts)
   
-# Make sure the columns of cts and rows of coldata are in the same order -------
-  for (x in 1:ncol(cts)) {
-    if(colnames(cts)[x] == coldata$Sample[x]) print(c(x, "true")) 
-    else print(c(x, "false"))
-  }
+    coldata <- read.csv("sample_info.csv")
+    coldata <- coldata[1:20 , c(1:3, 5:6)]
+    coldata$Cohort <- factor(coldata$Cohort)
+    coldata$Treatment <- factor(coldata$Treatment)
+    coldata
+  
+    # Make sure the columns of cts and rows of coldata are in the same order ---
+      for (x in 1:ncol(cts)) {
+        if(colnames(cts)[x] == coldata$Sample[x]) print(c(x, "true")) 
+        else print(c(x, "false"))
+      }
+      rm(x)
 
 # Set up DESeq Data Set --------------------------------------------------------
   dds <- DESeqDataSetFromMatrix(countData = cts, colData = coldata,
@@ -49,7 +56,6 @@
   dds <- dds[keep,]
   dds <- DESeq(dds)
   resultsNames(dds)
-  
   rm(keep)
   
 # Quality Check Steps ----------------------------------------------------------
@@ -152,16 +158,21 @@
   }
   
   res_PL23 <- results(dds, contrast = c("Treatment", "PL2-3+2DG", "PL2-3"))
-  res_R848 <- results(dds, contrast = c("Treatment", "R848+2DG", "R848"))
-  res_PL23vR848 <- results(dds, contrast = c("Treatment", "PL2-3", "R848"))
-  res_2DG_PL23vR848 <- results(dds, contrast = c("Treatment", "PL2-3+2DG", "R848+2DG"))
-
+  res_PL23 <- data.frame(subset(res_PL23, !is.na(padj)))
   summary_v2(res_PL23)
+  
+  res_R848 <- results(dds, contrast = c("Treatment", "R848+2DG", "R848"))
+  res_R848 <- data.frame(subset(res_R848, !is.na(padj)))
   summary_v2(res_R848)
+  
+  res_PL23vR848 <- results(dds, contrast = c("Treatment", "PL2-3", "R848"))
+  res_PL23vR848 <- data.frame(subset(res_PL23vR848, !is.na(padj)))
   summary_v2(res_PL23vR848)
+  
+  res_2DG_PL23vR848 <- results(dds, contrast = c("Treatment", "PL2-3+2DG", "R848+2DG"))
+  res_2DG_PL23vR848 <- data.frame(subset(res_2DG_PL23vR848, !is.na(padj)))
   summary_v2(res_2DG_PL23vR848)
   
-  # Filter out rows with a padj value of NA ------------------------------------
     # Note: There are a few reasons why a p value or padj value would be NA
     # According to the DESeq2 manual, these are the reasons:
     # If within a row, all samples have zero counts, the baseMean column will
@@ -171,10 +182,6 @@
     # If a row is filtered by automatic independent filtering, for having a 
     # low mean normalized count, then only padj will be set to NA.
     
-    res_PL23 <- data.frame(subset(res_PL23, !is.na(padj)))
-    res_R848 <- data.frame(subset(res_R848, !is.na(padj)))
-    res_PL23vR848 <- data.frame(subset(res_PL23vR848, !is.na(padj)))
-    res_2DG_PL23vR848 <- data.frame(subset(res_2DG_PL23vR848, !is.na(padj)))
     
   # Make DEG lists and export to CSV files -------------------------------------
     write_DEG_CSV <- function(res, file_start){
