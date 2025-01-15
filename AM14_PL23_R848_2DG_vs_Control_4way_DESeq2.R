@@ -14,22 +14,25 @@
   #   nrow(cts)
   #   rownames(cts) <- cts$external_gene_name
   #   nrow(cts)
-  # 
-  # # For Ensembl IDs as row names -----------------------------------------------
-  #   cts <- cts[!duplicated(cts$ensembl_gene_id), ]
-  #   nrow(cts)
-  #   cts <- cts[!is.na(cts$ensembl_gene_id), ]
-  #   nrow(cts)
-  #   rownames(cts) <- cts$ensembl_gene_id
-  #   nrow(cts)
-  #   
-  # For Entrez IDs as row names ------------------------------------------------
-    cts <- cts[!duplicated(cts$entrezgene), ]
+
+  # For Ensembl IDs as row names -----------------------------------------------
+    cts <- cts[!duplicated(cts$ensembl_gene_id), ]
     nrow(cts)
-    cts <- cts[!is.na(cts$entrezgene), ]
+    cts <- cts[!is.na(cts$ensembl_gene_id), ]
     nrow(cts)
-    rownames(cts) <- cts$entrezgene
+    rownames(cts) <- cts$ensembl_gene_id
     nrow(cts)
+    
+    gene_IDs <- cts[, c(1:4)]
+    head(gene_IDs)
+
+  # # For Entrez IDs as row names ------------------------------------------------
+  #   cts <- cts[!duplicated(cts$entrezgene), ]
+  #   nrow(cts)
+  #   cts <- cts[!is.na(cts$entrezgene), ]
+  #   nrow(cts)
+  #   rownames(cts) <- cts$entrezgene
+  #   nrow(cts)
 
   # Remove unneeded columns and set up experimental factors --------------------
     cts <- as.matrix(cts[, 5:24])
@@ -150,28 +153,31 @@
   resultsNames(dds)
     
 # Get results (default methods) ------------------------------------------------
-  summary_v2 <- function(res){
-    up <- nrow(subset(res, res$padj <= 0.05 & res$log2FoldChange >= 0.6))
-    down <- nrow(subset(res, res$padj <= 0.05 & res$log2FoldChange <= -0.6))
-    print(c("Up: ", up), quote = FALSE)
-    print(c("Down: ", down), quote = FALSE)
+  summary_v2 <- function(res, title){
+    DEG_summary <- data.frame(
+      c("Up (LFC >= 0.6)", "Down (LFC <= -0.6)"),
+      c(nrow(subset(res, res$padj <= 0.05 & res$log2FoldChange >= 0.6)),
+        nrow(subset(res, res$padj <= 0.05 & res$log2FoldChange <= -0.6)))
+    )
+    colnames(DEG_summary) <- c("DEG_summary", title)
+    DEG_summary
   }
   
   res_PL23 <- results(dds, contrast = c("Treatment", "PL2-3+2DG", "PL2-3"))
   res_PL23 <- data.frame(subset(res_PL23, !is.na(padj)))
-  summary_v2(res_PL23)
+  summary_v2(res_PL23, "PL2-3+2DG vs PL2-3")
   
   res_R848 <- results(dds, contrast = c("Treatment", "R848+2DG", "R848"))
   res_R848 <- data.frame(subset(res_R848, !is.na(padj)))
-  summary_v2(res_R848)
+  summary_v2(res_R848, "R848+2DG vs R848")
   
   res_PL23vR848 <- results(dds, contrast = c("Treatment", "PL2-3", "R848"))
   res_PL23vR848 <- data.frame(subset(res_PL23vR848, !is.na(padj)))
-  summary_v2(res_PL23vR848)
+  summary_v2(res_PL23vR848, "PL2-3 vs R848")
   
   res_2DG_PL23vR848 <- results(dds, contrast = c("Treatment", "PL2-3+2DG", "R848+2DG"))
   res_2DG_PL23vR848 <- data.frame(subset(res_2DG_PL23vR848, !is.na(padj)))
-  summary_v2(res_2DG_PL23vR848)
+  summary_v2(res_2DG_PL23vR848, "PL2-3+2DG vs R848+2DG")
   
     # Note: There are a few reasons why a p value or padj value would be NA
     # According to the DESeq2 manual, these are the reasons:
@@ -190,13 +196,13 @@
       all <- subset(res, res$padj <= 0.05 & abs(res$log2FoldChange) >= 0.6)
       
       write.table(rownames(up), 
-                  file = stri_join(c(file_start, "_Up.txt"), collapse = ""),
+                  file = stri_join(c("Output/Gene_Lists/", file_start, "_Up.txt"), collapse = ""),
                   quote = FALSE, row.names = FALSE, col.names = FALSE)
       write.table(rownames(down), 
-                  file = stri_join(c(file_start, "_Down.txt"), collapse = ""),
+                  file = stri_join(c("Output/Gene_Lists/", file_start, "_Down.txt"), collapse = ""),
                   quote = FALSE, row.names = FALSE, col.names = FALSE)
       write.table(rownames(all),
-                  file = stri_join(c(file_start, "_All.txt"), collapse = ""),
+                  file = stri_join(c("Output/Gene_Lists/", file_start, "_All.txt"), collapse = ""),
                   quote = FALSE, row.names = FALSE, col.names = FALSE)
     }
 
@@ -205,38 +211,68 @@
     write_DEG_CSV(res_PL23vR848, "PL2-3_Ctrl_vs_R848_Ctrl")
     write_DEG_CSV(res_2DG_PL23vR848, "PL2-3_2DG_vs_R848_2DG")
 
-# # Get results (Threshold-Based Wald tests) ----------------------------------- 
+# # Get results (Threshold-Based Wald tests) -----------------------------------
 #   res_PL23_lfc <- results(dds, contrast = c("Treatment", "PL2-3+2DG", "PL2-3"),
 #                           lfcThreshold = 0.6, altHypothesis = "greaterAbs", alpha = 0.05)
-#   res_R848_lfc <- results(dds, contrast = c("Treatment", "R848+2DG", "R848"), 
+#   res_R848_lfc <- results(dds, contrast = c("Treatment", "R848+2DG", "R848"),
 #                           lfcThreshold = 0.6, altHypothesis = "greaterAbs", alpha = 0.05)
 #   res_PL23vR848_lfc <- results(dds, contrast = c("Treatment", "PL2-3", "R848"),
 #                                lfcThreshold = 0.6, altHypothesis = "greaterAbs", alpha = 0.05)
-#   res_2DG_PL23vR848_lfc <- results(dds, contrast = c("Treatment", "PL2-3+2DG", "R848+2DG"), 
+#   res_2DG_PL23vR848_lfc <- results(dds, contrast = c("Treatment", "PL2-3+2DG", "R848+2DG"),
 #                                    lfcThreshold = 1, altHypothesis = "greaterAbs", alpha = 0.05)
-#   
+# 
 #   summary(res_PL23_lfc)
 #   summary(res_R848_lfc)
 #   summary(res_PL23vR848_lfc)
 #   summary(res_2DG_PL23vR848_lfc)
 
 # Save count data to Excel file ------------------------------------------------
-  wb <- createWorkbook("Output/DESeq2_results.xlsx")
-
-  addWorksheet(wb, "PL23_2DG_vs_Ctrl")
-  addWorksheet(wb, "R848_2DG_vs_Ctrl")
-  addWorksheet(wb, "PL23_Ctrl_vs_R848_Ctrl")
-  addWorksheet(wb, "PL23_2DG_vs_R848_2DG")
-  addWorksheet(wb, "Raw_Gene_Counts")
-  addWorksheet(wb, "Normalized_Gene_Counts")
-  
-  writeData(wb, "PL23_2DG_vs_Ctrl", res_PL23, rowNames = TRUE)
-  writeData(wb, "R848_2DG_vs_Ctrl", res_R848, rowNames = TRUE)
-  writeData(wb, "PL23_Ctrl_vs_R848_Ctrl", res_PL23vR848, rowNames = TRUE)
-  writeData(wb, "PL23_2DG_vs_R848_2DG", res_2DG_PL23vR848, rowNames = TRUE)
-  writeData(wb, "Raw_Gene_Counts", 
-            counts(dds, normalized = FALSE), rowNames = TRUE)
-  writeData(wb, "Normalized_Gene_Counts", 
-            counts(dds, normalized = TRUE), rowNames = TRUE)
-  
-  saveWorkbook(wb, "Output/DESeq2_results.xlsx", overwrite = TRUE)
+  # Add columns with alternative gene identifiers to the DESeq2 results --------
+    res_PL23_full <- tibble::rownames_to_column(res_PL23, var = "ensembl_gene_id")
+    res_PL23_full <- right_join(gene_IDs, res_PL23_full)
+    head(res_PL23_full)
+    
+    res_R848_full <- tibble::rownames_to_column(res_R848, var = "ensembl_gene_id")
+    res_R848_full <- right_join(gene_IDs, res_R848_full)
+    head(res_R848_full)
+    
+    res_PL23vR848_full <- tibble::rownames_to_column(res_PL23vR848, var = "ensembl_gene_id")
+    res_PL23vR848_full <- right_join(gene_IDs, res_PL23vR848_full)
+    head(res_PL23vR848_full)
+    
+    res_2DG_PL23vR848_full <- tibble::rownames_to_column(res_2DG_PL23vR848, var = "ensembl_gene_id")
+    res_2DG_PL23vR848_full <- right_join(gene_IDs, res_2DG_PL23vR848_full)
+    head(res_2DG_PL23vR848_full)
+    
+  # Make a data.frame that summarizes the numbers of DEGs detected -------------
+    full_summary <- full_join(summary_v2(res_PL23, "PL2-3+2DG vs PL2-3"),
+                              summary_v2(res_R848, "R848+2DG vs R848"))
+    full_summary <- full_join(full_summary,
+                              summary_v2(res_PL23vR848, "PL2-3 vs R848"))
+    full_summary <- full_join(full_summary,
+                              summary_v2(res_2DG_PL23vR848, "PL2-3+2DG vs R848+2DG"))
+    full_summary
+    
+    
+  # Save results to an Excel file ----------------------------------------------
+    wb <- createWorkbook("Output/DESeq2_results.xlsx")
+    
+    addWorksheet(wb, "DEG Summaries")
+    addWorksheet(wb, "PL23_2DG_vs_Ctrl")
+    addWorksheet(wb, "R848_2DG_vs_Ctrl")
+    addWorksheet(wb, "PL23_Ctrl_vs_R848_Ctrl")
+    addWorksheet(wb, "PL23_2DG_vs_R848_2DG")
+    addWorksheet(wb, "Raw_Gene_Counts")
+    addWorksheet(wb, "Normalized_Gene_Counts")
+    
+    writeData(wb, "DEG Summaries", full_summary)
+    writeData(wb, "PL23_2DG_vs_Ctrl", res_PL23_full)
+    writeData(wb, "R848_2DG_vs_Ctrl", res_R848_full)
+    writeData(wb, "PL23_Ctrl_vs_R848_Ctrl", res_PL23vR848_full)
+    writeData(wb, "PL23_2DG_vs_R848_2DG", res_2DG_PL23vR848_full)
+    writeData(wb, "Raw_Gene_Counts", 
+              counts(dds, normalized = FALSE), rowNames = TRUE)
+    writeData(wb, "Normalized_Gene_Counts", 
+              counts(dds, normalized = TRUE), rowNames = TRUE)
+    
+    saveWorkbook(wb, "Output/DESeq2_results.xlsx", overwrite = TRUE)
