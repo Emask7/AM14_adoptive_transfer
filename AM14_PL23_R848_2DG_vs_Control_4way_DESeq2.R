@@ -153,13 +153,25 @@
   resultsNames(dds)
     
 # Get results (default methods) ------------------------------------------------
-  summary_v2 <- function(res, title){
+  summary_v2 <- function(res, title, p_cutoff, lfc_cutoff){
+    if(missing(p_cutoff)) p_cutoff <- 0.05
+    if(missing(lfc_cutoff)) lfc_cutoff <- 0.6
+    if(missing(title)) title <- "# Genes"
+    
+    up_string <- stri_join(c("Up (LFC >= ", lfc_cutoff, ")"), collapse = "")
+    down_string <- stri_join(c("Down (LFC <= -", lfc_cutoff, ")"), collapse = "")
+    
     DEG_summary <- data.frame(
-      c("Up (LFC >= 0.6)", "Down (LFC <= -0.6)"),
-      c(nrow(subset(res, res$padj <= 0.05 & res$log2FoldChange >= 0.6)),
-        nrow(subset(res, res$padj <= 0.05 & res$log2FoldChange <= -0.6)))
+      c(up_string, down_string),
+      c(nrow(subset(res, res$padj <= p_cutoff & 
+                      res$log2FoldChange >= lfc_cutoff)),
+        nrow(subset(res, res$padj <= p_cutoff & 
+                      res$log2FoldChange <= (-1*lfc_cutoff)))
+        )
     )
-    colnames(DEG_summary) <- c("DEG_summary", title)
+    
+    col1_name <- stri_join(c("padj <= ", p_cutoff), collapse = "")
+    colnames(DEG_summary) <- c(col1_name, title)
     DEG_summary
   }
   
@@ -245,13 +257,24 @@
     head(res_2DG_PL23vR848_full)
     
   # Make a data.frame that summarizes the numbers of DEGs detected -------------
-    full_summary <- full_join(summary_v2(res_PL23, "PL2-3+2DG vs PL2-3"),
-                              summary_v2(res_R848, "R848+2DG vs R848"))
-    full_summary <- full_join(full_summary,
-                              summary_v2(res_PL23vR848, "PL2-3 vs R848"))
-    full_summary <- full_join(full_summary,
-                              summary_v2(res_2DG_PL23vR848, "PL2-3+2DG vs R848+2DG"))
+    full_summary <- full_join(summary_v2(res_PL23, "PL2-3+2DG vs PL2-3"), 
+                                summary_v2(res_PL23, "PL2-3+2DG vs PL2-3", lfc_cutoff = 1))
+    
+    full_summary_2 <- full_join(summary_v2(res_R848, "R848+2DG vs R848"), 
+                                summary_v2(res_R848, "R848+2DG vs R848", lfc_cutoff = 1))
+    
+    full_summary_3 <- full_join(summary_v2(res_PL23vR848, "PL2-3 vs R848"), 
+                                summary_v2(res_PL23vR848, "PL2-3 vs R848", lfc_cutoff = 1))
+    
+    full_summary_4 <- full_join(summary_v2(res_2DG_PL23vR848, "PL2-3+2DG vs R848+2DG"), 
+                                summary_v2(res_2DG_PL23vR848, "PL2-3+2DG vs R848+2DG", lfc_cutoff = 1))
+    
+    full_summary <- full_join(full_summary, full_summary_2)
+    full_summary <- full_join(full_summary, full_summary_3)
+    full_summary <- full_join(full_summary, full_summary_4)
     full_summary
+    
+    rm(full_summary_2, full_summary_3, full_summary_4)
     
     
   # Save results to an Excel file ----------------------------------------------
