@@ -202,26 +202,30 @@
     
     
   # Make DEG lists and export to CSV files -------------------------------------
-    write_DEG_CSV <- function(res, file_start){
-      up <- subset(res, res$padj <= 0.05 & res$log2FoldChange >= 0.6)
-      down <- subset(res, res$padj <= 0.05 & res$log2FoldChange <= -0.6)
-      all <- subset(res, res$padj <= 0.05 & abs(res$log2FoldChange) >= 0.6)
+    write_DEG_CSV <- function(res, lfc_cutoff, file_start){
+      up <- subset(res, res$padj <= 0.05 & res$log2FoldChange >= lfc_cutoff)
+      down <- subset(res, res$padj <= 0.05 & res$log2FoldChange <= (-1*lfc_cutoff))
+      all <- subset(res, res$padj <= 0.05 & abs(res$log2FoldChange) >= lfc_cutoff)
       
-      write.table(rownames(up), 
-                  file = stri_join(c("Output/Gene_Lists/", file_start, "_Up.txt"), collapse = ""),
-                  quote = FALSE, row.names = FALSE, col.names = FALSE)
-      write.table(rownames(down), 
-                  file = stri_join(c("Output/Gene_Lists/", file_start, "_Down.txt"), collapse = ""),
-                  quote = FALSE, row.names = FALSE, col.names = FALSE)
-      write.table(rownames(all),
-                  file = stri_join(c("Output/Gene_Lists/", file_start, "_All.txt"), collapse = ""),
-                  quote = FALSE, row.names = FALSE, col.names = FALSE)
+      if(!is.null(file_start)){
+        write.table(rownames(up), 
+                    file = stri_join(c("Output/Gene_Lists/", file_start, "_Up.txt"), collapse = ""),
+                    quote = FALSE, row.names = FALSE, col.names = FALSE)
+        write.table(rownames(down), 
+                    file = stri_join(c("Output/Gene_Lists/", file_start, "_Down.txt"), collapse = ""),
+                    quote = FALSE, row.names = FALSE, col.names = FALSE)
+        write.table(rownames(all),
+                    file = stri_join(c("Output/Gene_Lists/", file_start, "_All.txt"), collapse = ""),
+                    quote = FALSE, row.names = FALSE, col.names = FALSE)
+      }
+      
+      return(list(up = up, down = down, all = all))
     }
 
-    write_DEG_CSV(res_PL23, "PL2-3_2DG_vs_Control")
-    write_DEG_CSV(res_R848, "R848_2DG_vs_Control")
-    write_DEG_CSV(res_PL23vR848, "PL2-3_Ctrl_vs_R848_Ctrl")
-    write_DEG_CSV(res_2DG_PL23vR848, "PL2-3_2DG_vs_R848_2DG")
+    write_DEG_CSV(res_PL23, 0.6, "PL2-3_2DG_vs_Control")
+    write_DEG_CSV(res_R848, 0.6, "R848_2DG_vs_Control")
+    write_DEG_CSV(res_PL23vR848, 0.6, "PL2-3_Ctrl_vs_R848_Ctrl")
+    write_DEG_CSV(res_2DG_PL23vR848, 0.6, "PL2-3_2DG_vs_R848_2DG")
 
 # # Get results (Threshold-Based Wald tests) -----------------------------------
 #   res_PL23_lfc <- results(dds, contrast = c("Treatment", "PL2-3+2DG", "PL2-3"),
@@ -299,3 +303,34 @@
               counts(dds, normalized = TRUE), rowNames = TRUE)
     
     saveWorkbook(wb, "Output/DESeq2_results.xlsx", overwrite = TRUE)
+    
+# Make DEG Venn Diagram --------------------------------------------------------
+  DEG_lists <- list(
+    PL23_2DGvsCtrl = write_DEG_CSV(res_PL23_full, 1, NULL),
+    R848_2DGvsCtrl = write_DEG_CSV(res_R848_full, 1, NULL),
+    PL23vR848 = write_DEG_CSV(res_PL23vR848_full, 1, NULL)
+  )
+  nrow(DEG_lists$PL23_2DGvsCtrl$down)
+  nrow(DEG_lists$R848_2DGvsCtrl$down)
+  nrow(DEG_lists$PL23vR848$down)
+  
+    
+  venn_up <- venndetail(list("PL2-3+2DG vs PL2-3" = DEG_lists$PL23_2DGvsCtrl$up$ensembl_gene_id,
+                             "R848+2DG vs R848" = DEG_lists$R848_2DGvsCtrl$up$ensembl_gene_id,
+                             "PL2-3 vs R848" = DEG_lists$PL23vR848$up$ensembl_gene_id))
+  plot(venn_up, mycol = c("goldenrod1", "darkorange1", "red"), 
+       filename = "Output/venn_diagram_upreg.png",
+       margin = 0.1, cat.cex = 0.5)
+  dev.off()
+  detail(venn_up)
+  
+
+    
+  venn_down <- venndetail(list("PL2-3+2DG vs PL2-3" = DEG_lists$PL23_2DGvsCtrl$down$ensembl_gene_id,
+                               "R848+2DG vs R848" = DEG_lists$R848_2DGvsCtrl$down$ensembl_gene_id,
+                               "PL2-3 vs R848" = DEG_lists$PL23vR848$down$ensembl_gene_id))
+  plot(venn_down, mycol = c("darkseagreen1", "dodgerblue", "orchid"), 
+       filename = "Output/venn_diagram_downreg.png",
+       margin = 0.1, cat.cex = 0.5)
+  dev.off()
+  detail(venn_down)
