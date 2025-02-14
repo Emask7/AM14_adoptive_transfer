@@ -1,3 +1,62 @@
+# Functions --------------------------------------------------------------------
+  summary_v2 <- function(res, title, p_cutoff, lfc_cutoff){
+    if(missing(p_cutoff)) p_cutoff <- 0.05
+    if(missing(lfc_cutoff)) lfc_cutoff <- 0.6
+    if(missing(title)) title <- "# Genes"
+    
+    up_string <- stri_join(c("Up (LFC >= ", lfc_cutoff, ")"), collapse = "")
+    down_string <- stri_join(c("Down (LFC <= -", lfc_cutoff, ")"), collapse = "")
+    
+    DEG_summary <- data.frame(c(up_string, down_string),
+                              c(nrow(subset(res, res$padj <= p_cutoff & res$log2FoldChange >= lfc_cutoff)),
+                                nrow(subset(res, res$padj <= p_cutoff & res$log2FoldChange <= (-1*lfc_cutoff)))))
+    
+    col1_name <- stri_join(c("padj <= ", p_cutoff), collapse = "")
+    colnames(DEG_summary) <- c(col1_name, title)
+    DEG_summary
+  }
+
+  write_DEG_CSV <- function(res, lfc_cutoff, file_start){
+    up <- subset(res, res$padj <= 0.05 & res$log2FoldChange >= lfc_cutoff)[, c(1, 2, 4)]
+    down <- subset(res, res$padj <= 0.05 & res$log2FoldChange <= (-1*lfc_cutoff))[, c(1, 2, 4)]
+    all <- subset(res, res$padj <= 0.05 & abs(res$log2FoldChange) >= lfc_cutoff)[, c(1, 2, 4)]
+    
+    if(!is.null(file_start)){
+      write.table(up, 
+                  file = stri_join(c("Output/Gene_Lists/", file_start, "_Up.csv"), collapse = ""),
+                  sep = ",", quote = FALSE, row.names = FALSE, col.names = TRUE)
+      write.table(down, 
+                  file = stri_join(c("Output/Gene_Lists/", file_start, "_Down.csv"), collapse = ""),
+                  sep = ",", quote = FALSE, row.names = FALSE, col.names = TRUE)
+      write.table(all,
+                  file = stri_join(c("Output/Gene_Lists/", file_start, "_All.csv"), collapse = ""),
+                  sep = ",", quote = FALSE, row.names = FALSE, col.names = TRUE)
+    }
+    
+    return(list(up = up, down = down, all = all))
+  }
+
+  write_sig_LFCs <- function(res, lfc_cutoff, ID_type, file_start){
+    dat <- subset(res, res$padj <= 0.05 & abs(res$log2FoldChange) >= lfc_cutoff)
+    
+    if(missing(ID_type)) print("specify ID type: ensembl_gene_id, external_gene_name, or entrezgene")
+    else if(ID_type == "ensembl_gene_id") dat <- dat[, c(1, 6)]
+    else if(ID_type == "external_gene_name") dat <- dat[, c(2, 6)]
+    else if(ID_type == "entrezgene") dat <- dat[, c(4, 6)]
+    else print("specify ID type: ensembl_gene_id, external_gene_name, or entrezgene")
+    
+    colnames(dat) <- c("#", "LogFoldChange")
+    
+    if(!is.null(file_start)){
+      write.table(dat,
+                  file = stri_join(c("Output/Gene_Lists/", file_start, "_LFC_values.csv"), collapse = ""),
+                  sep = ",", quote = FALSE, row.names = FALSE, col.names = TRUE)
+    }
+    
+    dat
+  }
+  
+
 # Import count data and sample info --------------------------------------------
   cts <- read.delim("raw_data/AM14_rawCounts_No_Ighv_or_Igkv_genes.txt")
   colnames(cts)
@@ -153,28 +212,6 @@
   resultsNames(dds)
     
 # Get results (default methods) ------------------------------------------------
-  summary_v2 <- function(res, title, p_cutoff, lfc_cutoff){
-    if(missing(p_cutoff)) p_cutoff <- 0.05
-    if(missing(lfc_cutoff)) lfc_cutoff <- 0.6
-    if(missing(title)) title <- "# Genes"
-    
-    up_string <- stri_join(c("Up (LFC >= ", lfc_cutoff, ")"), collapse = "")
-    down_string <- stri_join(c("Down (LFC <= -", lfc_cutoff, ")"), collapse = "")
-    
-    DEG_summary <- data.frame(
-      c(up_string, down_string),
-      c(nrow(subset(res, res$padj <= p_cutoff & 
-                      res$log2FoldChange >= lfc_cutoff)),
-        nrow(subset(res, res$padj <= p_cutoff & 
-                      res$log2FoldChange <= (-1*lfc_cutoff)))
-        )
-    )
-    
-    col1_name <- stri_join(c("padj <= ", p_cutoff), collapse = "")
-    colnames(DEG_summary) <- c(col1_name, title)
-    DEG_summary
-  }
-  
   res_PL23 <- results(dds, contrast = c("Treatment", "PL2-3+2DG", "PL2-3"))
   res_PL23 <- data.frame(subset(res_PL23, !is.na(padj)))
   summary_v2(res_PL23, "PL2-3+2DG vs PL2-3")
@@ -202,30 +239,10 @@
     
     
   # Make DEG lists and export to CSV files -------------------------------------
-    write_DEG_CSV <- function(res, lfc_cutoff, file_start){
-      up <- subset(res, res$padj <= 0.05 & res$log2FoldChange >= lfc_cutoff)
-      down <- subset(res, res$padj <= 0.05 & res$log2FoldChange <= (-1*lfc_cutoff))
-      all <- subset(res, res$padj <= 0.05 & abs(res$log2FoldChange) >= lfc_cutoff)
-      
-      if(!is.null(file_start)){
-        write.table(rownames(up), 
-                    file = stri_join(c("Output/Gene_Lists/", file_start, "_Up.txt"), collapse = ""),
-                    quote = FALSE, row.names = FALSE, col.names = FALSE)
-        write.table(rownames(down), 
-                    file = stri_join(c("Output/Gene_Lists/", file_start, "_Down.txt"), collapse = ""),
-                    quote = FALSE, row.names = FALSE, col.names = FALSE)
-        write.table(rownames(all),
-                    file = stri_join(c("Output/Gene_Lists/", file_start, "_All.txt"), collapse = ""),
-                    quote = FALSE, row.names = FALSE, col.names = FALSE)
-      }
-      
-      return(list(up = up, down = down, all = all))
-    }
-
-    write_DEG_CSV(res_PL23, 0.6, "PL2-3_2DG_vs_Control")
-    write_DEG_CSV(res_R848, 0.6, "R848_2DG_vs_Control")
-    write_DEG_CSV(res_PL23vR848, 0.6, "PL2-3_Ctrl_vs_R848_Ctrl")
-    write_DEG_CSV(res_2DG_PL23vR848, 0.6, "PL2-3_2DG_vs_R848_2DG")
+    write_DEG_CSV(res_PL23, 1, "PL2-3_2DG_vs_Control")
+    write_DEG_CSV(res_R848, 1, "R848_2DG_vs_Control")
+    write_DEG_CSV(res_PL23vR848, 1, "PL2-3_Ctrl_vs_R848_Ctrl")
+    write_DEG_CSV(res_2DG_PL23vR848, 1, "PL2-3_2DG_vs_R848_2DG")
 
 # # Get results (Threshold-Based Wald tests) -----------------------------------
 #   res_PL23_lfc <- results(dds, contrast = c("Treatment", "PL2-3+2DG", "PL2-3"),
@@ -306,13 +323,24 @@
     
 # Make DEG Venn Diagram --------------------------------------------------------
   DEG_lists <- list(
-    PL23_2DGvsCtrl = write_DEG_CSV(res_PL23_full, 1, NULL),
-    R848_2DGvsCtrl = write_DEG_CSV(res_R848_full, 1, NULL),
-    PL23vR848 = write_DEG_CSV(res_PL23vR848_full, 1, NULL)
+    # PL23_2DGvsCtrl = write_DEG_CSV(res_PL23_full, 1, "PL2-3_2DG_vs_Control"),
+    # R848_2DGvsCtrl = write_DEG_CSV(res_R848_full, 1, "R848_2DG_vs_Control"),
+    # PL23vR848 = write_DEG_CSV(res_PL23vR848_full, 1, "PL2-3_Ctrl_vs_R848_Ctrl")
+    PL23_2DGvsCtrl = write_sig_LFCs(res_PL23_full, 1, "external_gene_name", "PL2-3_2DG_vs_Control"),
+    R848_2DGvsCtrl = write_sig_LFCs(res_R848_full, 1, "external_gene_name", "R848_2DG_vs_Control"),
+    PL23vR848 = write_sig_LFCs(res_PL23vR848_full, 1, "external_gene_name", "PL2-3_Ctrl_vs_R848_Ctrl")
   )
   nrow(DEG_lists$PL23_2DGvsCtrl$down)
   nrow(DEG_lists$R848_2DGvsCtrl$down)
   nrow(DEG_lists$PL23vR848$down)
+  
+  head(DEG_lists$PL23_2DGvsCtrl)
+  
+  
+  write_DEG_CSV(res_PL23, 1, "PL2-3_2DG_vs_Control")
+  write_DEG_CSV(res_R848, 1, "R848_2DG_vs_Control")
+  write_DEG_CSV(res_PL23vR848, 1, "PL2-3_Ctrl_vs_R848_Ctrl")
+  write_DEG_CSV(res_2DG_PL23vR848, 1, "PL2-3_2DG_vs_R848_2DG")
   
     
   venn_up <- venndetail(list("PL2-3+2DG vs PL2-3" = DEG_lists$PL23_2DGvsCtrl$up$ensembl_gene_id,

@@ -79,8 +79,9 @@ GSEA_dotplot <- function(gsea_dat, plot_title, NES_direction){
     theme(plot.title = element_text(hjust = 0.5), legend.position = "right")
 }
 
-GSEA_dotplot2 <- function(gsea_dat, plot_title, name_type, NES_min, NES_max){
-  if(nrow(gsea_dat) > 35){
+GSEA_dotplot2 <- function(gsea_dat, plot_title, name_type, NES_min, NES_max, ignore_limit){
+  if(missing(ignore_limit)) ignore_limit <- FALSE
+  if(nrow(gsea_dat) > 35 & ignore_limit == FALSE){
     gsea_dat <- gsea_dat[order(gsea_dat$FDR.q.val, decreasing = FALSE), ]
     gsea_dat <- gsea_dat[1:35, ]
     plot_title <- stri_join(c(plot_title, "(Top 35)"), collapse = "\n")
